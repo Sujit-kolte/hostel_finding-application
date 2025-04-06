@@ -1,31 +1,56 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:google_sign_in/google_sign_in.dart';
+import 'profile_page.dart'; // 👈 Create this page to show user details
 
 class LoginPage extends StatelessWidget {
+  Future<void> _signInWithGoogle(BuildContext context) async {
+    try {
+      final GoogleSignInAccount? googleUser = await GoogleSignIn().signIn();
+      if (googleUser == null) return;
+
+      final GoogleSignInAuthentication googleAuth =
+          await googleUser.authentication;
+
+      final credential = GoogleAuthProvider.credential(
+        accessToken: googleAuth.accessToken,
+        idToken: googleAuth.idToken,
+      );
+
+      UserCredential userCredential = await FirebaseAuth.instance
+          .signInWithCredential(credential);
+      User? user = userCredential.user;
+
+      if (user != null) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => ProfilePage(user: user)),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Google Sign-In failed: $e')));
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     double screenWidth = MediaQuery.of(context).size.width;
 
     return Scaffold(
-      // Adding the AppBar with a back arrow button
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
-          icon: Icon(
-            Icons.arrow_back,
-            color: const Color.fromARGB(255, 12, 11, 11),
-          ),
-          onPressed: () {
-            Navigator.pop(
-              context,
-            ); // Use Navigator.pushReplacementNamed(context, '/home'); for explicit navigation to home.
-          },
+          icon: Icon(Icons.arrow_back, color: Colors.black),
+          onPressed: () => Navigator.pop(context),
         ),
       ),
-      backgroundColor: Color(0xFF8996EB), // Background color
+      backgroundColor: Color(0xFF8996EB),
       body: Center(
         child: Container(
-          width: screenWidth * 0.85, // 85% of screen width
+          width: screenWidth * 0.85,
           padding: EdgeInsets.all(20),
           decoration: BoxDecoration(
             color: Colors.white,
@@ -37,7 +62,6 @@ class LoginPage extends StatelessWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              // Title
               Text(
                 "Login",
                 style: TextStyle(
@@ -47,8 +71,6 @@ class LoginPage extends StatelessWidget {
                 ),
               ),
               SizedBox(height: 20),
-
-              // Username Field
               TextField(
                 decoration: InputDecoration(
                   labelText: "Username",
@@ -59,8 +81,6 @@ class LoginPage extends StatelessWidget {
                 ),
               ),
               SizedBox(height: 15),
-
-              // Password Field
               TextField(
                 obscureText: true,
                 decoration: InputDecoration(
@@ -72,11 +92,9 @@ class LoginPage extends StatelessWidget {
                 ),
               ),
               SizedBox(height: 20),
-
-              // Login Button
               ElevatedButton(
                 onPressed: () {
-                  // TODO: Handle Login
+                  // TODO: Handle login with email & password
                 },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.blue,
@@ -86,12 +104,8 @@ class LoginPage extends StatelessWidget {
                 child: Text("Login"),
               ),
               SizedBox(height: 15),
-
-              // Google Sign-In Button
               ElevatedButton.icon(
-                onPressed: () {
-                  // TODO: Implement Google Sign-In
-                },
+                onPressed: () => _signInWithGoogle(context),
                 icon: Icon(Icons.login, color: Colors.white),
                 label: Text("Sign in with Google"),
                 style: ElevatedButton.styleFrom(
@@ -101,8 +115,6 @@ class LoginPage extends StatelessWidget {
                 ),
               ),
               SizedBox(height: 15),
-
-              // Sign-Up Option
               GestureDetector(
                 onTap: () {
                   // TODO: Navigate to Sign-Up Page
