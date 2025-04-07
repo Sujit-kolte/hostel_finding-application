@@ -1,3 +1,4 @@
+import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart'; // Import generated config file
@@ -8,6 +9,12 @@ void main() async {
 
   // Initialize Firebase with generated options
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  // Replace your current database reference with:
+  final DatabaseReference _databaseRef =
+      FirebaseDatabase.instanceFor(
+        app: Firebase.app(),
+        databaseURL: "https://hostel-finder-65872-default-rtdb.firebaseio.com/",
+      ).ref();
 
   runApp(MyApp());
 }

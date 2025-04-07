@@ -13,7 +13,7 @@ class _SplashState extends State<Splash> {
     super.initState();
 
     // Navigate to HomePage after 3 seconds
-    Timer(Duration(seconds: 7), () {
+    Timer(Duration(seconds: 4), () {
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(

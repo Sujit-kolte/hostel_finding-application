@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
-import 'login_page.dart'; // Import Login Page for navigation
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_database/firebase_database.dart';
+import 'package:hostel_finding/OwnerProfilePage%20.dart';
+import 'package:hostel_finding/StudentProfilePage%20.dart';
+import 'package:hostel_finding/login_page.dart';
 
 class HomePage extends StatefulWidget {
   @override
@@ -7,12 +11,75 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  bool isDrawerOpen = false; // Sidebar is hidden initially
+  bool isDrawerOpen = false;
+  String? userRole;
+  bool isLoading = true;
+  final DatabaseReference _databaseRef = FirebaseDatabase.instance.ref();
+  final User? currentUser = FirebaseAuth.instance.currentUser;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchUserRole();
+  }
+
+  Future<void> _fetchUserRole() async {
+    if (currentUser == null) {
+      setState(() {
+        isLoading = false;
+      });
+      return;
+    }
+
+    try {
+      final userSnapshot =
+          await _databaseRef.child('users').child(currentUser!.uid).get();
+
+      if (userSnapshot.exists) {
+        final userData = userSnapshot.value as Map<dynamic, dynamic>;
+        setState(() {
+          userRole = userData['role']?.toString();
+          isLoading = false;
+        });
+      } else {
+        setState(() {
+          isLoading = false;
+        });
+      }
+    } catch (e) {
+      setState(() {
+        isLoading = false;
+      });
+    }
+  }
 
   void toggleDrawer() {
     setState(() {
-      isDrawerOpen = !isDrawerOpen; // Toggle sidebar visibility
+      isDrawerOpen = !isDrawerOpen;
     });
+  }
+
+  void _navigateToProfile() {
+    if (userRole == 'student') {
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (context) => StudentProfilePage()),
+      );
+    } else if (userRole == 'owner') {
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (context) => OwnerProfilePage()),
+      );
+    } else {
+      // Handle case where role isn't set or user isn't logged in
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Please login first')));
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (context) => LoginPage()),
+      );
+    }
   }
 
   @override
@@ -24,14 +91,13 @@ class _HomePageState extends State<HomePage> {
       body: SafeArea(
         child: Stack(
           children: [
-            // Search Box & Menu Button
+            // Main Content
             Column(
               children: [
                 Padding(
                   padding: const EdgeInsets.all(10.0),
                   child: Row(
                     children: [
-                      // Search Box
                       Expanded(
                         child: TextField(
                           decoration: InputDecoration(
@@ -46,8 +112,6 @@ class _HomePageState extends State<HomePage> {
                         ),
                       ),
                       SizedBox(width: 10),
-
-                      // Menu Button (Sidebar Toggle)
                       IconButton(
                         icon: Icon(Icons.menu, size: 30),
                         onPressed: toggleDrawer,
@@ -58,18 +122,14 @@ class _HomePageState extends State<HomePage> {
               ],
             ),
 
-            // Sidebar (Appears on Right Below Button)
+            // Sidebar
             Positioned(
-              top: 80, // Space from top
-              right: 10, // Align to right
+              top: 80,
+              right: 10,
               child: AnimatedContainer(
                 duration: Duration(milliseconds: 300),
-                width:
-                    isDrawerOpen ? screenWidth * 0.4 : 0, // 40% width when open
-                height:
-                    isDrawerOpen
-                        ? screenHeight * 0.4
-                        : 0, // 40% height when open
+                width: isDrawerOpen ? screenWidth * 0.4 : 0,
+                height: isDrawerOpen ? screenHeight * 0.4 : 0,
                 decoration: BoxDecoration(
                   color: Colors.blue[300],
                   borderRadius: BorderRadius.circular(10),
@@ -82,10 +142,11 @@ class _HomePageState extends State<HomePage> {
                   ],
                 ),
                 padding: EdgeInsets.symmetric(vertical: 20, horizontal: 15),
-                child: SingleChildScrollView(
-                  child:
-                      isDrawerOpen
-                          ? Column(
+                child:
+                    isLoading
+                        ? Center(child: CircularProgressIndicator())
+                        : SingleChildScrollView(
+                          child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               SizedBox(height: 10),
@@ -100,9 +161,8 @@ class _HomePageState extends State<HomePage> {
                                 Icons.notifications,
                               ),
                             ],
-                          )
-                          : SizedBox(),
-                ),
+                          ),
+                        ),
               ),
             ),
           ],
@@ -111,7 +171,6 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  // Sidebar Button Function
   Widget _buildSidebarButton(String text, IconData icon) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 5.0),
@@ -124,14 +183,15 @@ class _HomePageState extends State<HomePage> {
         icon: Icon(icon),
         label: Text(text),
         onPressed: () {
-          toggleDrawer(); // Close sidebar when clicked
+          toggleDrawer();
 
-          // Navigate to Login Page
           if (text == "Login") {
             Navigator.push(
               context,
               MaterialPageRoute(builder: (context) => LoginPage()),
             );
+          } else if (text == "Profile") {
+            _navigateToProfile();
           }
         },
       ),
