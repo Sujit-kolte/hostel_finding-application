@@ -31,8 +31,8 @@ class _SplashState extends State<Splash> {
       backgroundColor: Color(0xFF8996EB),
       body: Center(
         child: CircleAvatar(
-          radius: screenWidth * 0.2,
-          backgroundImage: AssetImage('assets/logo.png'),
+          radius: screenWidth * 0.3,
+          backgroundImage: AssetImage('assets/logo.jpg'),
           backgroundColor: Colors.transparent,
         ),
       ),

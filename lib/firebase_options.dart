@@ -64,7 +64,8 @@ class DefaultFirebaseOptions {
     messagingSenderId: '784727553351',
     projectId: 'hostel-finder-65872',
     storageBucket: 'hostel-finder-65872.firebasestorage.app',
-    iosClientId: '784727553351-56bug5472dusq1d1puc8hh93eik2lnud.apps.googleusercontent.com',
+    iosClientId:
+        '784727553351-56bug5472dusq1d1puc8hh93eik2lnud.apps.googleusercontent.com',
     iosBundleId: 'com.example.hostelFinding',
   );
 
@@ -74,7 +75,8 @@ class DefaultFirebaseOptions {
     messagingSenderId: '784727553351',
     projectId: 'hostel-finder-65872',
     storageBucket: 'hostel-finder-65872.firebasestorage.app',
-    iosClientId: '784727553351-56bug5472dusq1d1puc8hh93eik2lnud.apps.googleusercontent.com',
+    iosClientId:
+        '784727553351-56bug5472dusq1d1puc8hh93eik2lnud.apps.googleusercontent.com',
     iosBundleId: 'com.example.hostelFinding',
   );
 

@@ -61,54 +61,13 @@ class _LoginPageState extends State<LoginPage> {
           );
       await _navigateBasedOnRole(userCredential.user!);
     } on FirebaseAuthException catch (e) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Login failed: ${e.message}')));
-    } finally {
-      setState(() => _isLoading = false);
-    }
-  }
-
-  Future<void> _signInWithGoogle() async {
-    setState(() => _isLoading = true);
-    try {
-      final GoogleSignInAccount? googleUser = await GoogleSignIn().signIn();
-      if (googleUser == null) return;
-
-      final GoogleSignInAuthentication googleAuth =
-          await googleUser.authentication;
-
-      final credential = GoogleAuthProvider.credential(
-        accessToken: googleAuth.accessToken,
-        idToken: googleAuth.idToken,
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Center(
+            child: Text('Login Failed  \n Enter Valid User Credentials'),
+          ),
+        ),
       );
-
-      UserCredential userCredential = await FirebaseAuth.instance
-          .signInWithCredential(credential);
-
-      if (userCredential.user != null) {
-        // Check if this is a new user
-        final userSnapshot =
-            await _databaseRef
-                .child('users')
-                .child(userCredential.user!.uid)
-                .get();
-
-        if (!userSnapshot.exists) {
-          // New Google user - send to signup to complete profile
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(builder: (_) => SignUpPage()),
-          );
-        } else {
-          // Existing user - navigate based on role
-          await _navigateBasedOnRole(userCredential.user!);
-        }
-      }
-    } catch (e) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Google Sign-In failed: $e')));
     } finally {
       setState(() => _isLoading = false);
     }

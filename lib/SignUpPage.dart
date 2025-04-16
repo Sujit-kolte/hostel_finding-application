@@ -112,7 +112,7 @@ class _SignUpPageState extends State<SignUpPage> {
             const Align(
               alignment: Alignment.centerLeft,
               child: Text(
-                "Email / Mob. no.",
+                "Email",
                 style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
               ),
             ),

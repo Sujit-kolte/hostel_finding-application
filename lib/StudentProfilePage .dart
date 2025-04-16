@@ -2,6 +2,92 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/material.dart';
 
+// MODEL CLASS
+class StudentData {
+  String name;
+  String interest;
+  String skills;
+  String college;
+  String branch;
+  String mobile;
+  String hostelName;
+  String rent;
+  String address;
+  List<String> photos;
+  List<String> features;
+  List<String> rules;
+
+  StudentData({
+    required this.name,
+    required this.interest,
+    required this.skills,
+    required this.college,
+    required this.branch,
+    required this.mobile,
+    required this.hostelName,
+    required this.rent,
+    required this.address,
+    required this.photos,
+    required this.features,
+    required this.rules,
+  });
+
+  factory StudentData.fromMap(Map<dynamic, dynamic> data) {
+    return StudentData(
+      name: data['name'] ?? '',
+      interest: data['interests'] ?? '',
+      skills: data['skills'] ?? '',
+      college: data['college'] ?? '',
+      branch: data['branch'] ?? '',
+      mobile: data['mobile'] ?? '',
+      hostelName: data['hostelName'] ?? '',
+      rent: data['rent'] ?? '',
+      address: data['address'] ?? '',
+      photos: List<String>.from(data['photos'] ?? []),
+      features: List<String>.from(data['features'] ?? []),
+      rules: List<String>.from(data['rules'] ?? []),
+    );
+  }
+
+  Map<String, dynamic> toMap() {
+    return {
+      'name': name,
+      'interests': interest,
+      'skills': skills,
+      'college': college,
+      'branch': branch,
+      'mobile': mobile,
+      'hostelName': hostelName,
+      'rent': rent,
+      'address': address,
+      'photos': photos,
+      'features': features,
+      'rules': rules,
+    };
+  }
+}
+
+// SERVICE CLASS
+class StudentDataService {
+  final DatabaseReference _ref = FirebaseDatabase.instance.ref();
+  final User? _user = FirebaseAuth.instance.currentUser;
+
+  Future<StudentData?> fetchStudentData() async {
+    if (_user == null) return null;
+    final snapshot = await _ref.child('users').child(_user!.uid).get();
+    if (snapshot.exists) {
+      return StudentData.fromMap(snapshot.value as Map<dynamic, dynamic>);
+    }
+    return null;
+  }
+
+  Future<void> saveStudentData(StudentData data) async {
+    if (_user == null) return;
+    await _ref.child('users').child(_user!.uid).update(data.toMap());
+  }
+}
+
+// UI PAGE
 class StudentProfilePage extends StatefulWidget {
   const StudentProfilePage({Key? key}) : super(key: key);
 
@@ -13,12 +99,11 @@ class _StudentProfilePageState extends State<StudentProfilePage> {
   final TextEditingController collegeController = TextEditingController();
   final TextEditingController interestController = TextEditingController();
   final TextEditingController skillsController = TextEditingController();
-  final DatabaseReference _databaseRef = FirebaseDatabase.instance.ref();
-  final User? currentUser = FirebaseAuth.instance.currentUser;
 
   String userName = '';
   String userAbout = '';
   bool isLoading = true;
+  bool isEditable = false;
   String errorMessage = '';
 
   @override
@@ -28,53 +113,53 @@ class _StudentProfilePageState extends State<StudentProfilePage> {
   }
 
   Future<void> _fetchUserData() async {
-    if (currentUser == null) {
+    final dataService = StudentDataService();
+    final studentData = await dataService.fetchStudentData();
+
+    if (studentData == null) {
       setState(() {
-        errorMessage = 'No user logged in';
+        errorMessage = 'Failed to fetch user data.';
         isLoading = false;
       });
       return;
     }
 
-    try {
-      final userSnapshot =
-          await _databaseRef.child('users').child(currentUser!.uid).get();
-
-      if (userSnapshot.exists) {
-        final userData = userSnapshot.value as Map<dynamic, dynamic>;
-        setState(() {
-          userName = userData['name'] ?? 'No name';
-          userAbout = userData['about'] ?? 'Tell us about yourself';
-          collegeController.text = userData['college'] ?? '';
-          interestController.text = userData['interests'] ?? '';
-          skillsController.text = userData['skills'] ?? '';
-          isLoading = false;
-        });
-      } else {
-        setState(() {
-          errorMessage = 'User data not found';
-          isLoading = false;
-        });
-      }
-    } catch (e) {
-      setState(() {
-        errorMessage = 'Error loading data: ${e.toString()}';
-        isLoading = false;
-      });
-    }
+    setState(() {
+      userName = studentData.name;
+      userAbout = studentData.interest;
+      collegeController.text = studentData.college;
+      interestController.text = studentData.interest;
+      skillsController.text = studentData.skills;
+      isLoading = false;
+    });
   }
 
   Future<void> _saveProfileChanges() async {
+    final dataService = StudentDataService();
+
+    final updatedData = StudentData(
+      name: userName,
+      interest: interestController.text,
+      skills: skillsController.text,
+      college: collegeController.text,
+      branch: '',
+      mobile: '',
+      hostelName: '',
+      rent: '',
+      address: '',
+      photos: [],
+      features: [],
+      rules: [],
+    );
+
     try {
-      await _databaseRef.child('users').child(currentUser!.uid).update({
-        'college': collegeController.text,
-        'interests': interestController.text,
-        'skills': skillsController.text,
-        'lastUpdated': ServerValue.timestamp,
-      });
+      await dataService.saveStudentData(updatedData);
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Profile updated successfully!')),
       );
+      setState(() {
+        isEditable = false;
+      });
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Error saving changes: ${e.toString()}')),
@@ -87,7 +172,8 @@ class _StudentProfilePageState extends State<StudentProfilePage> {
     return Scaffold(
       backgroundColor: const Color(0xFF919DFF),
       body: SafeArea(
-        child:
+        child: Stack(
+          children: [
             isLoading
                 ? const Center(child: CircularProgressIndicator())
                 : errorMessage.isNotEmpty
@@ -110,7 +196,7 @@ class _StudentProfilePageState extends State<StudentProfilePage> {
                             crossAxisAlignment: CrossAxisAlignment.center,
                             children: [
                               const SizedBox(height: 20),
-                              CircleAvatar(
+                              const CircleAvatar(
                                 radius: 60,
                                 backgroundColor: Colors.white,
                                 child: Icon(
@@ -137,36 +223,25 @@ class _StudentProfilePageState extends State<StudentProfilePage> {
                                 ),
                               ),
                               const SizedBox(height: 40),
-                              Align(
-                                alignment: Alignment.centerLeft,
-                                child: Text('College:', style: labelStyle),
-                              ),
-                              TextField(
-                                controller: collegeController,
-                                decoration: _inputDecoration(),
+                              _buildLabeledTextField(
+                                'College:',
+                                collegeController,
                               ),
                               const SizedBox(height: 20),
-                              Align(
-                                alignment: Alignment.centerLeft,
-                                child: Text('Interests:', style: labelStyle),
-                              ),
-                              TextField(
-                                controller: interestController,
-                                decoration: _inputDecoration(),
+                              _buildLabeledTextField(
+                                'Interests:',
+                                interestController,
                               ),
                               const SizedBox(height: 20),
-                              Align(
-                                alignment: Alignment.centerLeft,
-                                child: Text('Skills:', style: labelStyle),
-                              ),
-                              TextField(
-                                controller: skillsController,
-                                decoration: _inputDecoration(),
+                              _buildLabeledTextField(
+                                'Skills:',
+                                skillsController,
                               ),
                               const Spacer(),
-                              const SizedBox(height: 30),
+                              const SizedBox(height: 0), // moved up
                               ElevatedButton(
-                                onPressed: _saveProfileChanges,
+                                onPressed:
+                                    isEditable ? _saveProfileChanges : null,
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: Colors.grey[300],
                                   foregroundColor: Colors.black,
@@ -187,6 +262,7 @@ class _StudentProfilePageState extends State<StudentProfilePage> {
                                   ),
                                 ),
                               ),
+                              const SizedBox(height: 20),
                             ],
                           ),
                         ),
@@ -194,7 +270,42 @@ class _StudentProfilePageState extends State<StudentProfilePage> {
                     );
                   },
                 ),
+            Positioned(
+              top: 250,
+              right: 20,
+              child: IconButton(
+                icon: Icon(
+                  isEditable ? Icons.lock_open : Icons.edit,
+                  color: Colors.white,
+                ),
+                tooltip: isEditable ? 'Disable Edit' : 'Enable Edit',
+                onPressed: () {
+                  setState(() {
+                    isEditable = !isEditable;
+                  });
+                },
+              ),
+            ),
+          ],
+        ),
       ),
+    );
+  }
+
+  Widget _buildLabeledTextField(
+    String label,
+    TextEditingController controller,
+  ) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label, style: labelStyle),
+        TextField(
+          controller: controller,
+          enabled: isEditable,
+          decoration: _inputDecoration(),
+        ),
+      ],
     );
   }
 

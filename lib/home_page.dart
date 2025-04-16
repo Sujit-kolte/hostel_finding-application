@@ -16,11 +16,33 @@ class _HomePageState extends State<HomePage> {
   bool isLoading = true;
   final DatabaseReference _databaseRef = FirebaseDatabase.instance.ref();
   final User? currentUser = FirebaseAuth.instance.currentUser;
+  List<Map<dynamic, dynamic>> hostels = [];
 
   @override
   void initState() {
     super.initState();
     _fetchUserRole();
+    _fetchHostels();
+  }
+
+  Future<void> _fetchHostels() async {
+    try {
+      final hostelsSnapshot = await _databaseRef.child('hostels').get();
+      if (hostelsSnapshot.exists) {
+        final data = hostelsSnapshot.value as Map<dynamic, dynamic>;
+        setState(() {
+          hostels =
+              data.entries.map((entry) {
+                return {
+                  'id': entry.key,
+                  ...Map<dynamic, dynamic>.from(entry.value),
+                };
+              }).toList();
+        });
+      }
+    } catch (e) {
+      print('Error fetching hostels: $e');
+    }
   }
 
   Future<void> _fetchUserRole() async {
@@ -53,6 +75,102 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
+  Widget _buildHostelCard(Map<dynamic, dynamic> hostel) {
+    return Container(
+      margin: EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(color: Colors.black12, blurRadius: 4, offset: Offset(0, 2)),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Image Section
+          ClipRRect(
+            borderRadius: BorderRadius.vertical(top: Radius.circular(12)),
+            child:
+                hostel['imageurl'] != null
+                    ? Image.network(
+                      hostel['imageurl'],
+                      height: 150,
+                      width: double.infinity,
+                      fit: BoxFit.cover,
+                      loadingBuilder: (context, child, loadingProgress) {
+                        if (loadingProgress == null) return child;
+                        return Container(
+                          height: 150,
+                          color: Colors.grey[200],
+                          child: Center(
+                            child: CircularProgressIndicator(
+                              value:
+                                  loadingProgress.expectedTotalBytes != null
+                                      ? loadingProgress.cumulativeBytesLoaded /
+                                          loadingProgress.expectedTotalBytes!
+                                      : null,
+                            ),
+                          ),
+                        );
+                      },
+                      errorBuilder: (context, error, stackTrace) {
+                        return Container(
+                          height: 150,
+                          color: Colors.grey[200],
+                          child: Icon(
+                            Icons.broken_image,
+                            size: 50,
+                            color: Colors.grey[400],
+                          ),
+                        );
+                      },
+                    )
+                    : Container(
+                      height: 150,
+                      color: Colors.grey[200],
+                      child: Center(
+                        child: Icon(
+                          Icons.home,
+                          size: 50,
+                          color: Colors.grey[400],
+                        ),
+                      ),
+                    ),
+          ),
+
+          // Details Section
+          Padding(
+            padding: EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Name: ${hostel['name'] ?? 'Not Available'}',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.blue[800],
+                  ),
+                ),
+                SizedBox(height: 12),
+                Text(
+                  'Rent: ${hostel['rent'] ?? 'N/A'}',
+                  style: TextStyle(fontSize: 16, color: Colors.grey[800]),
+                ),
+                SizedBox(height: 8),
+                Text(
+                  'Distance: ${hostel['distance'] ?? 'N/A'}',
+                  style: TextStyle(fontSize: 16, color: Colors.grey[800]),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   void toggleDrawer() {
     setState(() {
       isDrawerOpen = !isDrawerOpen;
@@ -71,7 +189,6 @@ class _HomePageState extends State<HomePage> {
         MaterialPageRoute(builder: (context) => OwnerProfilePage()),
       );
     } else {
-      // Handle case where role isn't set or user isn't logged in
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text('Please login first')));
@@ -119,6 +236,15 @@ class _HomePageState extends State<HomePage> {
                     ],
                   ),
                 ),
+                Expanded(
+                  child: ListView.builder(
+                    padding: EdgeInsets.only(top: 10),
+                    itemCount: hostels.length,
+                    itemBuilder: (context, index) {
+                      return _buildHostelCard(hostels[index]);
+                    },
+                  ),
+                ),
               ],
             ),
 
@@ -156,10 +282,7 @@ class _HomePageState extends State<HomePage> {
                               SizedBox(height: 10),
                               _buildSidebarButton("Profile", Icons.person),
                               SizedBox(height: 10),
-                              _buildSidebarButton(
-                                "Notifications",
-                                Icons.notifications,
-                              ),
+                              _buildSidebarButton("Logout", Icons.logout),
                             ],
                           ),
                         ),
